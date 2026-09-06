@@ -1,0 +1,46 @@
+name: Deploy
+
+# The VPS has no public SSH port — it is reachable only over Tailscale — so the
+# runner joins the tailnet for the length of the job and leaves again. That is
+# the whole reason this is a push-to-deploy rather than a webhook: nothing has
+# to be exposed to the internet for it to work.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One deploy at a time, and never cancel one that is mid-build: a cancelled
+# `docker compose up` can leave the service stopped rather than rolled back.
+concurrency:
+  group: deploy-sensors
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Sensor simulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Join the tailnet
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+          version: latest
+
+      - name: Load the deploy key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H 100.71.109.62 >> ~/.ssh/known_hosts 2>/dev/null
+
+      # The build happens on the VPS, not here. The image would otherwise have
+      # to cross the tailnet as a several-hundred-megabyte transfer on every
+      # push, and the server has to pull the source anyway.
+      - name: Build and restart on the VPS
+        run: |
+          ssh -i ~/.ssh/id_deploy -o BatchMode=yes deploy@100.71.109.62 \
+            'bash /var/www/sajib/projects/farmflow/deploy.sh sensors'
