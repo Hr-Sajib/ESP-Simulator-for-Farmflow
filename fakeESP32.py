@@ -53,7 +53,7 @@ NODES = [
     {"farmerId": "fr1", "fieldId": "fd4", "profile": "greenhouse"},
 ]
 
-PUBLISH_INTERVAL_SECONDS = 5
+PUBLISH_INTERVAL_SECONDS = 2
 
 latest_sensor_values = {}
 
