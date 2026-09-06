@@ -1,0 +1,10 @@
+# Live broker credentials. Never commit this.
+.env
+.env.*
+!.env.example
+
+venv/
+__pycache__/
+*.pyc
+*.bak
+.DS_Store
