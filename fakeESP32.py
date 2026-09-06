@@ -149,4 +149,13 @@ if __name__ == "__main__":
             daemon=True,
         ).start()
 
-    app.run(host=HOST, port=PORT)
+    # Flask's built-in server is single-threaded and explicitly not meant for
+    # production; this service is reachable from the internet through Caddy, so
+    # one slow client would otherwise stall every other request. Waitress is a
+    # pure-Python WSGI server, so it adds no build dependencies to the image.
+    #
+    # Served here rather than through a `waitress-serve` CMD because the
+    # publisher threads above have to start in this same process.
+    from waitress import serve
+
+    serve(app, host=HOST, port=PORT, threads=4)

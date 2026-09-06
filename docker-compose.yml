@@ -5,6 +5,14 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    # Nothing here needs a Linux capability: each process runs as a non-root
+    # user and binds a port above 1024. Dropping them all shrinks what a code
+    # execution bug could reach for next, and no-new-privileges stops a setuid
+    # binary inside the image from being used to climb back out.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     env_file:
       - .env
     environment:
